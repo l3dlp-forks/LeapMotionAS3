@@ -8,6 +8,7 @@ package
 	import flash.display.Sprite;
 	import flash.utils.getTimer;
 	
+	[SWF(frameRate=60)]
 	public class InterfaceSample extends Sprite implements Listener
 	{
 		private var controller:Controller;
@@ -54,6 +55,21 @@ package
 		public function onFocusLost( controller:Controller ):void
 		{
 			trace( "onFocusLost" );
+		}
+		
+		public function onServiceConnect( controller:Controller ):void
+		{
+			trace( "onServiceConnect" );
+		}
+		
+		public function onServiceDisconnect( controller:Controller ):void
+		{
+			trace( "onServiceDisconnect" );
+		}
+		
+		public function onDeviceChange( controller:Controller ):void
+		{
+			trace( "onDeviceChange" );
 		}
 		
 		public function onFrame( controller:Controller, frame:Frame ):void

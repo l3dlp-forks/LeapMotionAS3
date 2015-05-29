@@ -1,5 +1,4 @@
-LeapMotionAS3
-=================
+[<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/logo_as3.png">](https://github.com/logotype/LeapMotionAS3)
 
 This is the AS3 framework for working with Leap Motion.
 
@@ -10,7 +9,7 @@ Leap Motion is a motion-control software and hardware company developing the wor
 Demos
 -----------
 
-[<img src="http://logotype.se/leapmotion/victor1.png">](http://www.youtube.com/watch?v=y9SDf5GSDF8) [<img src="http://logotype.se/leapmotion/victor2.png">](http://www.youtube.com/watch?v=Hduiif_GfsU) [<img src="http://logotype.se/leapmotion/wouter1.png">](https://vimeo.com/60170459) [<img src="http://logotype.se/leapmotion/wouter2.png">](https://vimeo.com/61708308) [<img src="http://logotype.se/leapmotion/victor3.png">](http://www.youtube.com/watch?v=qd7DD8kKd-E) [<img src="http://logotype.se/leapmotion/ben1.png">](http://vimeo.com/62464243) [<img src="http://logotype.se/leapmotion/niko1.png">](http://www.youtube.com/watch?v=rQa2b_sFFi8) [<img src="http://logotype.se/leapmotion/raw1.png">](http://vimeo.com/62725367) [<img src="http://logotype.se/leapmotion/ben2.png">](https://vimeo.com/62758339) [<img src="http://logotype.se/leapmotion/specialmoves2.png">](http://vimeo.com/66831642) [<img src="http://logotype.se/leapmotion/matstec1.png">](http://vimeo.com/65882620) [<img src="http://logotype.se/leapmotion/quasimondo1.png">](http://www.youtube.com/watch?v=eHpD3Wuj2Co)
+[<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/victor1.png">](http://www.youtube.com/watch?v=y9SDf5GSDF8) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/victor2.png">](http://www.youtube.com/watch?v=Hduiif_GfsU) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/wouter1.png">](https://vimeo.com/60170459) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/wouter2.png">](https://vimeo.com/61708308) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/victor3.png">](http://www.youtube.com/watch?v=qd7DD8kKd-E) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/ben1.png">](http://vimeo.com/62464243) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/niko2.png">](http://www.youtube.com/watch?v=-P4awZlnxhU) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/raw1.png">](http://vimeo.com/62725367) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/ben2.png">](https://vimeo.com/62758339) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/specialmoves2.png">](http://vimeo.com/66831642) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/matstec1.png">](http://vimeo.com/65882620) [<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/quasimondo1.png">](http://www.youtube.com/watch?v=eHpD3Wuj2Co)
 
 
 Quick start
@@ -30,6 +29,7 @@ Create an instance of the Controller class:
 What you'll get from the `LEAPMOTION_FRAME` handler is a `Frame` instance, with strongly
 typed properties such as `Hands`, `Pointables`, `Direction`, `Gestures` and more:
 
+```actionscript
     private function onFrame( event:LeapEvent ):void
     {
         // Get the most recent frame and report some basic information
@@ -65,20 +65,23 @@ typed properties such as `Hands`, `Pointables`, `Direction`, `Gestures` and more
     		trace( "Hand pitch: " + LeapUtil.toDegrees( direction.pitch ) + " degrees, " + "roll: " + LeapUtil.toDegrees( normal.roll ) + " degrees, " + "yaw: " + LeapUtil.toDegrees( direction.yaw ) + " degrees\n" );
     	}
     }
+```
 
 Optionally, you can simply call `controller.frame()` e.g. in your main loop, or implement the `Listener` interface for callbacks.
 
 Features
 --------
 
-<img src="http://logotype.se/leapImageTelemetry.png">
-+ High performance, 110 FPS for data (typically 2% CPU usage on a recent MacBook Pro)
+<img src="http://logotype.github.io/LeapMotionAS3Docs/examples/leapImageTelemetry.png">
++ High performance, 210 FPS for data (typically 2% CPU usage on a recent MacBook Pro)
 + Clean, lightweight and documented code
 + Same structure as official API
 + Gestures (Circle, Key Tap, Screen Tap, Swipe)
++ Image API (Read raw data from infrared stereo cameras)
++ Skeleton/Bone API
 + Works great with [Away3D](https://github.com/away3d/away3d-core-fp11) and [Starling](https://github.com/PrimaryFeather/Starling-Framework)
 + Connect multiple devices to the same Leap Motion (via an optional "host" argument)
-+ Uses AIR 3.8/ASC 2.0 compiler features (be sure to add the `-inline` and `-swf-version=20` compiler arguments)
++ Uses AIR 16.0/ASC 2.0 compiler features (add the `-inline` and `-swf-version=27` compiler arguments)
 + No external dependencies, creates a optimized socket when the ANE isn't available
 + AIR Native Extension (ANE) which directly interfaces with the C++ library (Mac OSX and Windows)
 + Compatible with Mac OSX, Windows, iOS (iPad/iPhone/etc) and Android
@@ -88,7 +91,7 @@ AIR Native Extension
 
 You can use this library on both web and AIR projects. If you are using it on an AIR for Desktop project, you can take advantage of the AIR Native Extension.
 
-[Download the ane-file](https://github.com/logotype/LeapMotionAS3/blob/master/bin/LeapMotionAS3-asc2.ane?raw=true) and place it somewhere in your project (preferably in the directory where you would put your swc files). Link the ane file to your project:
+[Download the ane-file](https://github.com/logotype/LeapMotionAS3/blob/master/bin/LeapMotionAS3.ane?raw=true) and place it somewhere in your project (preferably in the directory where you would put your swc files). Link the ane file to your project:
 
 ####Flash Builder 4.7
 
@@ -98,7 +101,7 @@ You can use this library on both web and AIR projects. If you are using it on an
 3. In that same window, choose Native Extensions and click on Add ANE… Select that same ane file.
 4. Select Actionscript Build Packaging > Native extensions. Check the checkbox next to the native extension. Ignore the warning that says the extension isn't used.
 
-####Flash CS6
+####Flash CC/Flash CS6
 
 
 1. Select File > Actionscript settings.
@@ -115,18 +118,12 @@ You can use this library on both web and AIR projects. If you are using it on an
 
 ###Using the ANE on Windows
 
-If you are using the ANE on Windows, you need to add the Leap Motion program folder to your PATH.
-
-1. From the Desktop, right-click My Computer and click Properties.
-2. Click Advanced System Settings link in the left column.
-3. In the System Properties window click the Environment Variables button.
-4. In the Environment Variables window, highlight the Path variable in the Systems Variable section and click the Edit button.
-5. Add the Leap Motion folder from your program files at the end of that line (ex: C:\Program Files (x86)\Leap Motion\Leap Motion).
+If you are using the ANE on Windows, you need to copy Leap.dll and Leapd.dll to the same folder as your executable (for debug builds). When applications are running with ADL, you need to set the PATH environment variable to the same folder as your executable. In some circumstances, it can be easiest to copy Leap.dll and Leapd.dll to the folder where adl.exe exists.
 
 Documentation
 -----------
 
-[API documentation](http://logotype.se/leapmotion/docs/)
+[API documentation](http://logotype.github.io/LeapMotionAS3Docs/index.html)
 
 To generate documentation, simply run `ant docs` from the build/ directory.
 
@@ -149,7 +146,7 @@ Authors
 Copyright and license
 ---------------------
 
-Copyright © 2013 logotype
+Copyright © 2014 logotype
 
 Author: Victor Norgren
 
@@ -168,4 +165,4 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-IN THE SOFTWARE. 
+IN THE SOFTWARE.

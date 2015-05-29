@@ -1,11 +1,3 @@
-//
-//  LNLeapDevice.h
-//  LeapNative
-//
-//  Created by Wouter Verweirder on 01/02/13.
-//  Copyright (c) 2013 Wouter Verweirder. All rights reserved.
-//
-
 #ifndef __LeapNative__LNLeapDevice__
 #define __LeapNative__LNLeapDevice__
 
@@ -31,34 +23,28 @@ namespace leapnative {
         Controller*     controller;
 
         FREObject getFrame();
-        FREObject getClosestScreenHitPointable(int pointableId);
-        FREObject getClosestScreenHit(Vector position, Vector direction);
         FREObject hasFocus();
-        
+        FREObject isServiceConnected();
+
         //frame class
         FREObject frameProbability(int frameId, int sinceFrameId, int type);
+
+        //image class
+        FREObject imageRectify(int imageId, Vector uv);
+        FREObject imageWarp(int imageId, Vector xy);
         
         //hand class
         FREObject handProbability(int handId, int frameId, int sinceFrameId, int type);
-        
-        //screen class
-        FREObject getScreenDistanceToPoint(int screenId, Vector point);
-        FREObject getScreenHeightPixels(int screenId);
-        FREObject getScreenWidthPixels(int screenId);
-        FREObject getScreenHorizontalAxis(int screenId);
-        FREObject getScreenVerticalAxis(int screenId);
-        FREObject getScreenBottomLeftCorner(int screenId);
-        FREObject getScreenIntersect(int screenId, Vector position, Vector direction, bool normalize, float clampRatio = 1.0f);
-        FREObject getScreenProject(int screenId, Vector position, bool normalize, float clampRatio = 1.0f);
-        FREObject getScreenIsValid(int screenId);
-        FREObject getScreenNormal(int screenId);
         
         //device class
         FREObject getDeviceDistanceToBoundary(Vector position);
         FREObject getDeviceHorizontalViewAngle();
         FREObject getDeviceVerticalViewAngle();
+        FREObject getDeviceIsEmbedded();
+        FREObject getDeviceIsStreaming();
         FREObject getDeviceIsValid();
         FREObject getDeviceRange();
+        FREObject getDeviceType();
         
         //config class
         FREObject getConfigBool(uint32_t len, const uint8_t* key);
@@ -81,8 +67,11 @@ namespace leapnative {
         LNLeapListener* listener;
         Frame           lastFrame;
         
+        FREObject createArm(Arm arm);
+        FREObject createBone(Finger pointable, int boneType);
         FREObject createVector3(double x, double y, double z);
         FREObject createMatrix(FREObject xVector3, FREObject yVector3, FREObject zVector3, FREObject originVector3);
+        void FREDebug(FREResult result, const char* note);
     };
 }
 

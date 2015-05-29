@@ -5,52 +5,91 @@ package
 	import com.leapmotion.leap.util.*;
 	
 	import flash.display.Sprite;
+	import flash.display.Bitmap;
 
-	[SWF(frameRate=60)]
-	public class Sample extends Sprite
+    [SWF(width="1280", height="480", frameRate="60", backgroundColor="#000000")]
+	public class Sample extends Sprite implements Listener
 	{
 		private var controller:Controller;
+		private var bitmap1:Bitmap = new Bitmap();
+		private var bitmap2:Bitmap = new Bitmap();
 
 		public function Sample()
 		{
+			this.addChild( bitmap1 );
+			this.addChild( bitmap2 );
+			bitmap2.x = 640;
 			controller = new Controller();
-			controller.addEventListener( LeapEvent.LEAPMOTION_INIT, onInit );
-			controller.addEventListener( LeapEvent.LEAPMOTION_CONNECTED, onConnect );
-			controller.addEventListener( LeapEvent.LEAPMOTION_DISCONNECTED, onDisconnect );
-			controller.addEventListener( LeapEvent.LEAPMOTION_EXIT, onExit );
-			controller.addEventListener( LeapEvent.LEAPMOTION_FRAME, onFrame );
+			controller.setListener( this );
 		}
 
-		private function onInit( event:LeapEvent ):void
+		public function onInit( controller:Controller ):void
 		{
-			trace( "Initialized" );
+			trace( "onInit" );
 		}
-
-		private function onConnect( event:LeapEvent ):void
+		
+		public function onConnect( controller:Controller ):void
 		{
-			trace( "Connected" );
+			trace( "onConnect" );
 			controller.enableGesture( Gesture.TYPE_SWIPE );
 			controller.enableGesture( Gesture.TYPE_CIRCLE );
 			controller.enableGesture( Gesture.TYPE_SCREEN_TAP );
 			controller.enableGesture( Gesture.TYPE_KEY_TAP );
-			controller.setPolicyFlags( Controller.POLICY_BACKGROUND_FRAMES );
+			controller.setPolicyFlags( Controller.POLICY_IMAGES );
 		}
-
-		private function onDisconnect( event:LeapEvent ):void
+		
+		public function onDisconnect( controller:Controller ):void
 		{
-			trace( "Disconnected" );
+			trace( "onDisconnect" );
 		}
-
-		private function onExit( event:LeapEvent ):void
+		
+		public function onExit( controller:Controller ):void
 		{
-			trace( "Exited" );
+			trace( "onExit" );
 		}
-
-		private function onFrame( event:LeapEvent ):void
+		
+		public function onFocusGained( controller:Controller ):void
+		{
+			trace( "onFocusGained" );
+		}
+		
+		public function onFocusLost( controller:Controller ):void
+		{
+			trace( "onFocusLost" );
+		}
+		
+		public function onServiceConnect( controller:Controller ):void
+		{
+			trace( "onServiceConnect" );
+		}
+		
+		public function onServiceDisconnect( controller:Controller ):void
+		{
+			trace( "onServiceDisconnect" );
+		}
+		
+		public function onDeviceChange( controller:Controller ):void
+		{
+			trace( "onDeviceChange" );
+		}
+		
+		public function onFrame( controller:Controller, frame:Frame ):void
 		{
 			// Get the most recent frame and report some basic information
-			var frame:Frame = event.frame;
 			trace( "Frame id: " + frame.id + ", timestamp: " + frame.timestamp + ", hands: " + frame.hands.length + ", fingers: " + frame.fingers.length + ", tools: " + frame.tools.length + ", gestures: " + frame.gestures().length );
+
+			if ( frame.images.length > 0 )
+			{
+				var image1:Image = frame.images[0];
+				bitmap1.bitmapData = image1.data;
+				bitmap1.width = 640;
+				bitmap1.height = 480;
+
+				var image2:Image = frame.images[1];
+				bitmap2.bitmapData = image2.data;
+				bitmap2.width = 640;
+				bitmap2.height = 480;
+			}
 
 			if ( frame.hands.length > 0 )
 			{
@@ -64,7 +103,21 @@ package
 					// Calculate the hand's average finger tip position
 					var avgPos:Vector3 = Vector3.zero();
 					for each ( var finger:Finger in fingers )
+					{
 						avgPos = avgPos.plus( finger.tipPosition );
+
+						// Skeleton API
+						trace( "Skeleton distal: " + finger.dipPosition );
+						trace( "Skeleton proximal: " + finger.pipPosition );
+						trace( "Skeleton knuckle: " + finger.mcpPosition );
+						trace( "Finger type: " + finger.type );
+						
+						// Bone API
+						trace( "Bone metacarpal: " + finger.metacarpal );
+						trace( "Bone proximal: " + finger.proximal );
+						trace( "Bone intermediate: " + finger.intermediate );
+						trace( "Bone distal: " + finger.distal );
+					}
 
 					avgPos = avgPos.divide( fingers.length );
 					trace( "Hand has " + fingers.length + " fingers, average finger tip position: " + avgPos );
@@ -78,7 +131,7 @@ package
 				var direction:Vector3 = hand.direction;
 
 				// Calculate the hand's pitch, roll, and yaw angles
-				trace( "Hand pitch: " + LeapUtil.toDegrees( direction.pitch ) + " degrees, " + "roll: " + LeapUtil.toDegrees( normal.roll ) + " degrees, " + "yaw: " + LeapUtil.toDegrees( direction.yaw ) + " degrees\n" );
+				trace( "Hand pitch: " + LeapUtil.toDegrees( direction.pitch ) + " degrees, " + "roll: " + LeapUtil.toDegrees( normal.roll ) + " degrees, " + "yaw: " + LeapUtil.toDegrees( direction.yaw ) + " degrees, " + "arm: " + hand.arm + "\n" );
 			}
 
 			var gestures:Vector.<Gesture> = frame.gestures();
@@ -108,7 +161,7 @@ package
 						if ( circle.state != Gesture.STATE_START )
 						{
 							var previousGesture:Gesture = controller.frame( 1 ).gesture( circle.id );
-							if( previousGesture.isValid() )
+							if( previousGesture.isValid() && previousGesture.type == Gesture.TYPE_CIRCLE )
 							{
 								var previousUpdate:CircleGesture = CircleGesture( controller.frame( 1 ).gesture( circle.id ) );
 								sweptAngle = ( circle.progress - previousUpdate.progress ) * 2 * Math.PI;

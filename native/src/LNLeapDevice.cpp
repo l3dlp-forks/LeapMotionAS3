@@ -1,11 +1,3 @@
-//
-//  LNLeapDevice.cpp
-//  LeapNative
-//
-//  Created by Wouter Verweirder on 01/02/13.
-//  Copyright (c) 2013 Wouter Verweirder. All rights reserved.
-//
-
 #include "LNLeapDevice.h"
 #include <map>
 
@@ -34,6 +26,75 @@ namespace leapnative {
         controller = NULL;
     }
     
+    FREObject LNLeapDevice::createBone(Finger pointable, int boneType) {
+        
+        Bone::Type boneEnum = static_cast<Bone::Type>(boneType);
+        
+        FREObject freBone;
+        FRENewObject( (const uint8_t*) "com.leapmotion.leap.Bone", 0, NULL, &freBone, NULL);
+        
+        FREObject freBoneType;
+        FRENewObjectFromInt32(boneEnum, &freBoneType);
+        FRESetObjectProperty(freBone, (const uint8_t*) "type", freBoneType, NULL);
+        
+        FREObject freBoneWidth;
+        FRENewObjectFromDouble(pointable.width(), &freBoneWidth);
+        FRESetObjectProperty(freBone, (const uint8_t*) "width", freBoneWidth, NULL);
+        
+        FREObject freBoneLength;
+        FRENewObjectFromDouble(pointable.length(), &freBoneLength);
+        FRESetObjectProperty(freBone, (const uint8_t*) "length", freBoneLength, NULL);
+        
+        FRESetObjectProperty(freBone, (const uint8_t*) "prevJoint", createVector3(
+                                                                                  Finger(pointable).bone(boneEnum).prevJoint().x,
+                                                                                  Finger(pointable).bone(boneEnum).prevJoint().y,
+                                                                                  Finger(pointable).bone(boneEnum).prevJoint().z), NULL);
+        
+        FRESetObjectProperty(freBone, (const uint8_t*) "nextJoint", createVector3(
+                                                                                  Finger(pointable).bone(boneEnum).nextJoint().x,
+                                                                                  Finger(pointable).bone(boneEnum).nextJoint().y,
+                                                                                  Finger(pointable).bone(boneEnum).nextJoint().z), NULL);
+        
+        const Matrix bMat = Finger(pointable).bone(boneEnum).basis();
+        FRESetObjectProperty(freBone, (const uint8_t*) "basis", createMatrix(
+                                                                             createVector3(bMat.xBasis[0], bMat.xBasis[1], bMat.xBasis[2]),
+                                                                             createVector3(bMat.yBasis[0], bMat.yBasis[1], bMat.yBasis[2]),
+                                                                             createVector3(bMat.zBasis[0], bMat.zBasis[1], bMat.zBasis[2]),
+                                                                             createVector3(bMat.origin[0], bMat.origin[1], bMat.origin[2])
+                                                                             ), NULL);
+        return freBone;
+    }
+    
+    FREObject LNLeapDevice::createArm(Arm arm) {
+        
+        FREObject freArm;
+        FRENewObject( (const uint8_t*) "com.leapmotion.leap.Arm", 0, NULL, &freArm, NULL);
+        
+        Vector displacement = arm.elbowPosition() - arm.wristPosition();
+        float length = displacement.magnitude();
+        
+        FREObject freArmLength;
+        FRENewObjectFromDouble(length, &freArmLength);
+        FRESetObjectProperty(freArm, (const uint8_t*) "length", freArmLength, NULL);
+        
+        FREObject freArmWidth;
+        FRENewObjectFromDouble(arm.width(), &freArmWidth);
+        FRESetObjectProperty(freArm, (const uint8_t*) "width", freArmWidth, NULL);
+        
+        FRESetObjectProperty(freArm, (const uint8_t*) "direction", createVector3(arm.direction().x, arm.direction().y, arm.direction().z), NULL);
+        FRESetObjectProperty(freArm, (const uint8_t*) "elbowPosition", createVector3(arm.elbowPosition().x, arm.elbowPosition().y, arm.elbowPosition().z), NULL);
+        FRESetObjectProperty(freArm, (const uint8_t*) "wristPosition", createVector3(arm.wristPosition().x, arm.wristPosition().y, arm.wristPosition().z), NULL);
+        
+        FRESetObjectProperty(freArm, (const uint8_t*) "basis", createMatrix(
+                                                                            createVector3(arm.basis().xBasis[0], arm.basis().xBasis[1], arm.basis().xBasis[2]),
+                                                                            createVector3(arm.basis().yBasis[0], arm.basis().yBasis[1], arm.basis().yBasis[2]),
+                                                                            createVector3(arm.basis().zBasis[0], arm.basis().zBasis[1], arm.basis().zBasis[2]),
+                                                                            createVector3(arm.basis().origin[0], arm.basis().origin[1], arm.basis().origin[2])
+                                                                            ), NULL);
+        
+        return freArm;
+    }
+    
     FREObject LNLeapDevice::createVector3(double x, double y, double z) {
         FREObject obj;
 		FREObject freX, freY, freZ;
@@ -55,15 +116,17 @@ namespace leapnative {
     FREObject LNLeapDevice::getFrame() {
         
         Frame frame = controller->frame();
-        
-        // TODO: Only continue with valid Frame?
-        
+                
         FREObject freCurrentFrame;
         FRENewObject( (const uint8_t*) "com.leapmotion.leap.Frame", 0, NULL, &freCurrentFrame, NULL);
         
         FREObject freFrameId;
         FRENewObjectFromInt32((int32_t) frame.id(), &freFrameId);
         FRESetObjectProperty(freCurrentFrame, (const uint8_t*) "id", freFrameId, NULL);
+
+        FREObject freCurrentFramesPerSecond;
+        FRENewObjectFromDouble(frame.currentFramesPerSecond(), &freCurrentFramesPerSecond);
+        FRESetObjectProperty(freCurrentFrame, (const uint8_t*) "currentFramesPerSecond", freCurrentFramesPerSecond, NULL);
         
         const Vector frameTranslation = frame.translation(lastFrame);
         FRESetObjectProperty(freCurrentFrame, (const uint8_t*) "translationVector", createVector3(frameTranslation.x, frameTranslation.y, frameTranslation.z), NULL);
@@ -81,7 +144,7 @@ namespace leapnative {
         FRESetObjectProperty(freCurrentFrame, (const uint8_t*) "scaleFactorNumber", freFrameScaleFactor, NULL);
         
         FREObject freTimestamp;
-        FRENewObjectFromInt32((int32_t) frame.timestamp(), &freTimestamp);
+        FRENewObjectFromInt32((int32_t) (frame.timestamp() >> 32), &freTimestamp);
         FRESetObjectProperty(freCurrentFrame, (const uint8_t*) "timestamp", freTimestamp, NULL);
         
         FREObject freInteractionBox;
@@ -104,7 +167,7 @@ namespace leapnative {
         FRESetObjectProperty(freCurrentFrame, (const uint8_t*) "interactionBox", freInteractionBox, NULL);
 
         std::map<int, FREObject> freHandsMap;
-        if (!frame.hands().empty()) {
+        if (!frame.hands().isEmpty()) {
             
             FREObject freHands;
             FREGetObjectProperty(freCurrentFrame, (const uint8_t*) "hands", &freHands, NULL);
@@ -120,10 +183,25 @@ namespace leapnative {
                 FREObject freHandId;
                 FRENewObjectFromInt32(hand.id(), &freHandId);
                 FRESetObjectProperty(freHand, (const uint8_t*) "id", freHandId, NULL);
+                
+                FREObject freHandIsLeft;
+                FRENewObjectFromBool(hand.isLeft(), &freHandIsLeft);
+                FRESetObjectProperty(freHand, (const uint8_t*) "isLeft", freHandIsLeft, NULL);
+                
+                FREObject freHandIsRight;
+                FRENewObjectFromBool(hand.isRight(), &freHandIsRight);
+                FRESetObjectProperty(freHand, (const uint8_t*) "isRight", freHandIsRight, NULL);
+                
                 FRESetObjectProperty(freHand, (const uint8_t*) "palmNormal", createVector3(hand.palmNormal()[0], hand.palmNormal()[1], hand.palmNormal()[2]), NULL);
                 FRESetObjectProperty(freHand, (const uint8_t*) "palmPosition", createVector3(hand.palmPosition()[0], hand.palmPosition()[1], hand.palmPosition()[2]), NULL);
+                FRESetObjectProperty(freHand, (const uint8_t*) "stabilizedPalmPosition", createVector3(hand.stabilizedPalmPosition()[0], hand.stabilizedPalmPosition()[1], hand.stabilizedPalmPosition()[2]), NULL);
                 FRESetObjectProperty(freHand, (const uint8_t*) "palmVelocity", createVector3(hand.palmVelocity()[0], hand.palmVelocity()[1], hand.palmVelocity()[2]), NULL);
+                FRESetObjectProperty(freHand, (const uint8_t*) "arm", createArm(hand.arm()), NULL);
                 
+                FREObject freHandPalmWidth;
+                FRENewObjectFromDouble(hand.palmWidth(), &freHandPalmWidth);
+                FRESetObjectProperty(freHand, (const uint8_t*) "palmWidth", freHandPalmWidth, NULL);
+
                 const Matrix rotation = hand.rotationMatrix(lastFrame);
                 FRESetObjectProperty(freHand, (const uint8_t*) "rotation", createMatrix(
                                      createVector3(rotation.xBasis[0], rotation.xBasis[1], rotation.xBasis[2]),
@@ -142,6 +220,18 @@ namespace leapnative {
                 FRENewObjectFromDouble(hand.sphereRadius(), &freSphereRadius);
                 FRESetObjectProperty(freHand, (const uint8_t*) "sphereRadius", freSphereRadius, NULL);
                 
+                FREObject frePinchStrength;
+                FRENewObjectFromDouble(hand.pinchStrength(), &frePinchStrength);
+                FRESetObjectProperty(freHand, (const uint8_t*) "pinchStrength", frePinchStrength, NULL);
+                
+                FREObject freGrabStrength;
+                FRENewObjectFromDouble(hand.grabStrength(), &freGrabStrength);
+                FRESetObjectProperty(freHand, (const uint8_t*) "grabStrength", freGrabStrength, NULL);
+                
+                FREObject freTimeVisible;
+                FRENewObjectFromDouble(hand.timeVisible(), &freTimeVisible);
+                FRESetObjectProperty(freHand, (const uint8_t*) "timeVisible", freTimeVisible, NULL);
+                
                 const Vector translation = hand.translation(lastFrame);
                 FRESetObjectProperty(freHand, (const uint8_t*) "translationVector", createVector3(translation.x, translation.y, translation.z), NULL);
                 
@@ -152,7 +242,7 @@ namespace leapnative {
         }
         
         std::map<int, FREObject> frePointablesMap;
-        if(!frame.pointables().empty()) {
+        if(!frame.pointables().isEmpty()) {
             
             FREObject frePointables;
             FREGetObjectProperty(freCurrentFrame, (const uint8_t*) "pointables", &frePointables, NULL);
@@ -176,15 +266,38 @@ namespace leapnative {
                 FREObject frePointableLength;
                 FRENewObjectFromDouble(pointable.length(), &frePointableLength);
                 FRESetObjectProperty(frePointable, (const uint8_t*) "length", frePointableLength, NULL);
-
+                
                 FREObject frePointableWidth;
                 FRENewObjectFromDouble(pointable.width(), &frePointableWidth);
                 FRESetObjectProperty(frePointable, (const uint8_t*) "width", frePointableWidth, NULL);
+                
+                FREObject frePointableExtended;
+                FRENewObjectFromBool(pointable.isExtended(), &frePointableExtended);
+                FRESetObjectProperty(frePointable, (const uint8_t*) "isExtended", frePointableExtended, NULL);
 
                 FRESetObjectProperty(frePointable, (const uint8_t*) "direction", createVector3(pointable.direction().x, pointable.direction().y, pointable.direction().z), NULL);
                 FRESetObjectProperty(frePointable, (const uint8_t*) "tipPosition", createVector3(pointable.tipPosition().x, pointable.tipPosition().y, pointable.tipPosition().z), NULL);
                 FRESetObjectProperty(frePointable, (const uint8_t*) "stabilizedTipPosition", createVector3(pointable.stabilizedTipPosition().x, pointable.stabilizedTipPosition().y, pointable.stabilizedTipPosition().z), NULL);
                 FRESetObjectProperty(frePointable, (const uint8_t*) "tipVelocity", createVector3(pointable.tipVelocity().x, pointable.tipVelocity().y, pointable.tipVelocity().z), NULL);
+                if(pointable.isFinger()) {
+                    FRESetObjectProperty(frePointable, (const uint8_t*) "dipPosition", createVector3(Finger(pointable).jointPosition(Finger::JOINT_DIP).x, Finger(pointable).jointPosition(Finger::JOINT_DIP).y, Finger(pointable).jointPosition(Finger::JOINT_DIP).z), NULL);
+                    FRESetObjectProperty(frePointable, (const uint8_t*) "pipPosition", createVector3(Finger(pointable).jointPosition(Finger::JOINT_PIP).x, Finger(pointable).jointPosition(Finger::JOINT_PIP).y, Finger(pointable).jointPosition(Finger::JOINT_PIP).z), NULL);
+                    FRESetObjectProperty(frePointable, (const uint8_t*) "mcpPosition", createVector3(Finger(pointable).jointPosition(Finger::JOINT_MCP).x, Finger(pointable).jointPosition(Finger::JOINT_MCP).y, Finger(pointable).jointPosition(Finger::JOINT_MCP).z), NULL);
+                    
+                    FREObject frePointableType;
+                    FRENewObjectFromInt32(Finger(pointable).type(), &frePointableType);
+                    FRESetObjectProperty(frePointable, (const uint8_t*) "type", frePointableType, NULL);
+                    
+                    //bones
+                    FRESetObjectProperty(frePointable, (const uint8_t*) "metacarpal", createBone(Finger(pointable), Bone::TYPE_METACARPAL), NULL);
+                    FRESetObjectProperty(frePointable, (const uint8_t*) "proximal", createBone(Finger(pointable), Bone::TYPE_PROXIMAL), NULL);
+                    FRESetObjectProperty(frePointable, (const uint8_t*) "intermediate", createBone(Finger(pointable), Bone::TYPE_INTERMEDIATE), NULL);
+                    FRESetObjectProperty(frePointable, (const uint8_t*) "distal", createBone(Finger(pointable), Bone::TYPE_DISTAL), NULL);
+                }
+                
+                FREObject frePointableTimeVisible;
+                FRENewObjectFromDouble(pointable.timeVisible(), &frePointableTimeVisible);
+                FRESetObjectProperty(frePointable, (const uint8_t*) "timeVisible", frePointableTimeVisible, NULL);
                 
                 FREObject frePointableTouchDistance;
                 FRENewObjectFromDouble(pointable.touchDistance(), &frePointableTouchDistance);
@@ -209,7 +322,7 @@ namespace leapnative {
                 FREObject frePointableZone;
                 FRENewObjectFromInt32(zone, &frePointableZone);
                 FRESetObjectProperty(frePointable, (const uint8_t*) "touchZone", frePointableZone, NULL);
-
+                
                 //map to hand & back
                 if(pointable.hand().isValid()) {
                     FREObject freHand = freHandsMap[pointable.hand().id()];
@@ -250,7 +363,7 @@ namespace leapnative {
             }
         }
         
-        if(!frame.gestures().empty()) {
+        if(!frame.gestures().isEmpty()) {
             
             FREObject freGestures;
             FREGetObjectProperty(freCurrentFrame, (const uint8_t*) "gesturesVector", &freGestures, NULL);
@@ -377,7 +490,7 @@ namespace leapnative {
                 FRENewObjectFromInt32(gesture.id(), &freGestureId);
                 FRESetObjectProperty(freGesture, (const uint8_t*) "id", freGestureId, NULL);
                 
-                if (!gesture.hands().empty()) {
+                if (!gesture.hands().isEmpty()) {
                     
                     FREObject freGestureHands;
                     FREGetObjectProperty(freGesture, (const uint8_t*) "hands", &freGestureHands, NULL);
@@ -390,7 +503,7 @@ namespace leapnative {
                     }
                 }
                 
-                if (!gesture.pointables().empty()) {
+                if (!gesture.pointables().isEmpty()) {
                     
                     FREObject freGesturePointables;
                     FREGetObjectProperty(freGesture, (const uint8_t*) "pointables", &freGesturePointables, NULL);
@@ -408,6 +521,92 @@ namespace leapnative {
             }
         }
         
+        if(!frame.images().isEmpty()) {
+            FREObject freImages;
+            FREGetObjectProperty(freCurrentFrame, (const uint8_t*) "images", &freImages, NULL);
+            
+            ImageList images = frame.images();
+            
+            for(int i = 0; i < 2; i++) {
+                Image image = images[i];
+
+                FREObject freImage;
+                FRENewObject( (const uint8_t*) "com.leapmotion.leap.Image", 0, NULL, &freImage, NULL);
+                
+                FREObject freImageId;
+                FRENewObjectFromInt32(image.id(), &freImageId);
+                FRESetObjectProperty(freImage, (const uint8_t*) "id", freImageId, NULL);
+                
+                FREObject freImageWidth;
+                FRENewObjectFromInt32(image.width(), &freImageWidth);
+                FRESetObjectProperty(freImage, (const uint8_t*) "width", freImageWidth, NULL);
+                
+                FREObject freImageHeight;
+                FRENewObjectFromInt32(image.height(), &freImageHeight);
+                FRESetObjectProperty(freImage, (const uint8_t*) "height", freImageHeight, NULL);
+                
+                FREObject freImageDistortionWidth;
+                FRENewObjectFromInt32(image.distortionWidth(), &freImageDistortionWidth);
+                FRESetObjectProperty(freImage, (const uint8_t*) "distortionWidth", freImageDistortionWidth, NULL);
+                
+                FREObject freImageDistortionHeight;
+                FRENewObjectFromInt32(image.distortionHeight(), &freImageDistortionHeight);
+                FRESetObjectProperty(freImage, (const uint8_t*) "distortionHeight", freImageDistortionHeight, NULL);
+                
+                FREObject freImageRayOffsetX;
+                FRENewObjectFromInt32(image.rayOffsetX(), &freImageRayOffsetX);
+                FRESetObjectProperty(freImage, (const uint8_t*) "rayOffsetX", freImageRayOffsetX, NULL);
+                
+                FREObject freImageRayOffsetY;
+                FRENewObjectFromInt32(image.rayOffsetY(), &freImageRayOffsetY);
+                FRESetObjectProperty(freImage, (const uint8_t*) "rayOffsetY", freImageRayOffsetY, NULL);
+                
+                FREObject freImageRayScaleX;
+                FRENewObjectFromInt32(image.rayScaleX(), &freImageRayScaleX);
+                FRESetObjectProperty(freImage, (const uint8_t*) "rayScaleX", freImageRayScaleX, NULL);
+                
+                FREObject freImageRayScaleY;
+                FRENewObjectFromInt32(image.rayScaleY(), &freImageRayScaleY);
+                FRESetObjectProperty(freImage, (const uint8_t*) "rayScaleY", freImageRayScaleY, NULL);
+                
+                // The image data is a set of 8-bit intensity values.
+                // The buffer is Image::width() * Image::height() bytes long.
+                const unsigned char* image_buffer = image.data();
+
+                // Set image data
+                FREObject freImageData;
+                FREObject arguments[] = {freImageWidth, freImageHeight};
+                
+                FRENewObject((const uint8_t*) "flash.display.BitmapData", 2, arguments, &freImageData, NULL);
+                
+                FREBitmapData bmd;
+                FREAcquireBitmapData(freImageData, &bmd);
+                
+                uint32_t *bmdPixels = bmd.bits32;
+                int x, bitmapLength = bmd.width * bmd.height;
+                
+                for(x = 0; x < bitmapLength; x++)
+                    *bmdPixels++ = (255 << 24) | (image_buffer[x] << 16) | (image_buffer[x] << 8) | image_buffer[x];
+
+                FREInvalidateBitmapDataRect(freImageData, 0, 0, bmd.width, bmd.height);
+                FREReleaseBitmapData(freImageData);
+
+                FRESetObjectProperty(freImage, (const uint8_t*) "data", freImageData, NULL);
+
+                // Set distortion map
+                FREObject freDistortionMap;
+                FREGetObjectProperty(freImage, (const uint8_t*) "distortion", &freDistortionMap, NULL);
+                
+                for (int j = 0; j < (image.distortionWidth() * image.distortionHeight()); j++) {
+                    FREObject freDistortionValue;
+                    FRENewObjectFromDouble(image.distortion()[j], &freDistortionValue);
+                    FRESetArrayElementAt(freDistortionMap, j, freDistortionValue);
+                }
+                
+                FRESetArrayElementAt(freImages, i, freImage);
+            }
+        }
+        
         lastFrame = frame;
         
         return freCurrentFrame;
@@ -419,133 +618,12 @@ namespace leapnative {
         return freReturnValue;
     }
     
-    FREObject LNLeapDevice::getClosestScreenHitPointable(int pointableId) {
-        ScreenList screenList = controller->calibratedScreens();
-        Frame frame = controller->frame();
-        PointableList pointables = frame.pointables();
-        Pointable pointable;
-        
-        // TODO: Create a fake pointable width tipPosition and direction instead of looping
-        bool didFind = false;
-        for (int i = 0; i < pointables.count(); i++) {
-            if (pointables[i].id() == pointableId) {
-                pointable = pointables[i];
-                didFind = true;
-                break;
-            }
-        }
-        
-        FREObject freScreenId;
-        
-        if(didFind) {
-            Screen screen = screenList.closestScreenHit(pointable);
-            FRENewObjectFromInt32(screen.id(), &freScreenId);
-        } else {
-            FRENewObjectFromInt32(0, &freScreenId);
-        }
-        return freScreenId;
-    }
-    
-    FREObject LNLeapDevice::getClosestScreenHit(Vector position, Vector direction) {
-        ScreenList screenList = controller->calibratedScreens();
-        Frame frame = controller->frame();
-        Screen screen = screenList.closestScreenHit(position, direction);
-
-        FREObject freScreenId;
-        FRENewObjectFromInt32(screen.id(), &freScreenId);
-
-        return freScreenId;
-    }
-    
-    //start screen class
-    FREObject LNLeapDevice::getScreenDistanceToPoint(int screenId, Vector point) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        FREObject freScreenDistance;
-        FRENewObjectFromDouble((double) screen.distanceToPoint(point), &freScreenDistance);
-        
-        return freScreenDistance;
-    }
-    
-    FREObject LNLeapDevice::getScreenHeightPixels(int screenId) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
+    FREObject LNLeapDevice::isServiceConnected() {
         FREObject freReturnValue;
-        FRENewObjectFromInt32((int32_t) screen.heightPixels(), &freReturnValue);
-        
+        // disabled during beta 2.0 FRENewObjectFromBool(controller->isServiceConnected(), &freReturnValue);
+        FRENewObjectFromBool(true, &freReturnValue);
         return freReturnValue;
     }
-    
-    FREObject LNLeapDevice::getScreenWidthPixels(int screenId) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        FREObject freReturnValue;
-        FRENewObjectFromInt32((int32_t) screen.widthPixels(), &freReturnValue);
-        
-        return freReturnValue;
-    }
-    
-    FREObject LNLeapDevice::getScreenHorizontalAxis(int screenId) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        const Vector vector = screen.horizontalAxis();
-        return createVector3(vector.x, vector.y, vector.z);
-    }
-    
-    FREObject LNLeapDevice::getScreenVerticalAxis(int screenId) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        const Vector vector = screen.verticalAxis();
-        return createVector3(vector.x, vector.y, vector.z);
-    }
-    
-    FREObject LNLeapDevice::getScreenBottomLeftCorner(int screenId) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        const Vector vector = screen.bottomLeftCorner();
-        return createVector3(vector.x, vector.y, vector.z);
-    }
-    
-    FREObject LNLeapDevice::getScreenIntersect(int screenId, Vector position, Vector direction, bool normalize, float clampRatio) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        const Vector vector = screen.intersect(position, direction, normalize, clampRatio);
-        return createVector3(vector.x, vector.y, vector.z);
-    }
-    
-    FREObject LNLeapDevice::getScreenProject(int screenId, Vector position, bool normalize, float clampRatio) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        const Vector vector = screen.project(position, normalize, clampRatio);
-        return createVector3(vector.x, vector.y, vector.z);
-    }
-    
-    FREObject LNLeapDevice::getScreenIsValid(int screenId) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        FREObject freReturnValue;
-        FRENewObjectFromBool(screen.isValid(), &freReturnValue);
-        
-        return freReturnValue;
-    }
-    
-    FREObject LNLeapDevice::getScreenNormal(int screenId) {
-        ScreenList screenList = controller->calibratedScreens();
-        Screen screen = screenList[screenId];
-        
-        const Vector vector = screen.normal();
-        return createVector3(vector.x, vector.y, vector.z);
-    }
-    //end screen class
     
     //start device class
     FREObject LNLeapDevice::getDeviceDistanceToBoundary(Vector position) {
@@ -578,6 +656,26 @@ namespace leapnative {
         return freDeviceVerticalViewAngle;
     }
     
+    FREObject LNLeapDevice::getDeviceIsEmbedded() {
+        DeviceList deviceList = controller->devices();
+        Device device = deviceList[0];
+        
+        FREObject freReturnValue;
+        FRENewObjectFromBool(device.isEmbedded() ? 1 : 0, &freReturnValue);
+        
+        return freReturnValue;
+    }
+    
+    FREObject LNLeapDevice::getDeviceIsStreaming() {
+        DeviceList deviceList = controller->devices();
+        Device device = deviceList[0];
+        
+        FREObject freReturnValue;
+        FRENewObjectFromBool(device.isStreaming() ? 1 : 0, &freReturnValue);
+        
+        return freReturnValue;
+    }
+    
     FREObject LNLeapDevice::getDeviceIsValid() {
         DeviceList deviceList = controller->devices();
         Device device = deviceList[0];
@@ -594,6 +692,16 @@ namespace leapnative {
         
         FREObject freDeviceRange;
         FRENewObjectFromDouble((double) device.range(), &freDeviceRange);
+        
+        return freDeviceRange;
+    }
+    
+    FREObject LNLeapDevice::getDeviceType() {
+        DeviceList deviceList = controller->devices();
+        Device device = deviceList[0];
+        
+        FREObject freDeviceRange;
+        FRENewObjectFromDouble((int) device.type(), &freDeviceRange);
         
         return freDeviceRange;
     }
@@ -791,6 +899,32 @@ namespace leapnative {
     }
     //end frame class
     
+    //start image class
+    FREObject LNLeapDevice::imageRectify(int imageId, Vector uv) {
+        
+        Frame frameObj = controller->frame();
+        
+        if (!frameObj.images().isEmpty()) {
+            Vector rectifiedVector = frameObj.images()[imageId].rectify(uv);
+            return createVector3(rectifiedVector.x, rectifiedVector.y, rectifiedVector.z);
+        } else {
+            return createVector3(0, 0, 0);
+        }
+    }
+    
+    FREObject LNLeapDevice::imageWarp(int imageId, Vector xy) {
+        
+        Frame frameObj = controller->frame();
+        
+        if (!frameObj.images().isEmpty()) {
+            Vector warpedVector = frameObj.images()[imageId].warp(xy);
+            return createVector3(warpedVector.x, warpedVector.y, warpedVector.z);
+        } else {
+            return createVector3(0, 0, 0);
+        }
+    }
+    //end image class
+    
     //start hand class
     FREObject LNLeapDevice::handProbability(int handId, int frameId, int sinceFrameId, int type) {
         
@@ -846,4 +980,42 @@ namespace leapnative {
         return freReturnValue;
     }
     //end hand class
+    
+    void LNLeapDevice::FREDebug(FREResult result, const char* note) {
+        switch (result) {
+            case FRE_OK:
+                std::cout << "[NATIVE " << note << "] OK" << std::endl;
+                break;
+            case FRE_NO_SUCH_NAME:
+                std::cout << "[NATIVE " << note << "] NO SUCH NAME" << std::endl;
+                break;
+            case FRE_INVALID_OBJECT:
+                std::cout << "[NATIVE " << note << "] INVALID OBJECT" << std::endl;
+                break;
+            case FRE_TYPE_MISMATCH:
+                std::cout << "[NATIVE " << note << "] TYPE MISMATCH" << std::endl;
+                break;
+            case FRE_ACTIONSCRIPT_ERROR:
+                std::cout << "[NATIVE " << note << "] ACTIONSCRIPT ERROR" << std::endl;
+                break;
+            case FRE_INVALID_ARGUMENT:
+                std::cout << "[NATIVE " << note << "] INVALID ARGUMENT" << std::endl;
+                break;
+            case FRE_READ_ONLY:
+                std::cout << "[NATIVE " << note << "] READ ONLY" << std::endl;
+                break;
+            case FRE_WRONG_THREAD:
+                std::cout << "[NATIVE " << note << "] WRONG THREAD" << std::endl;
+                break;
+            case FRE_ILLEGAL_STATE:
+                std::cout << "[NATIVE " << note << "] ILLEGAL STATE" << std::endl;
+                break;
+            case FRE_INSUFFICIENT_MEMORY:
+                std::cout << "[NATIVE " << note << "] INSUFFICIENT MEMORY" << std::endl;
+                break;
+            default:
+                std::cout << "[NATIVE " << note << "] OTHER RESULT" << std::endl;
+                break;
+        }
+    }
 }
